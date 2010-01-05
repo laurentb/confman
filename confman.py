@@ -41,6 +41,10 @@ class SymlinkConfigAction(ConfigAction):
         return filename
 
     def check(self):
+        source = self.source_path()
+        if not os.path.exists(source):
+            raise Exception("Source does not exists")
+
         dest = self.dest_path()
         if os.path.lexists(dest):
             if not os.path.islink(dest):
@@ -62,8 +66,52 @@ class SymlinkConfigAction(ConfigAction):
         print "Created new link: "+dest+" => "+source
         os.symlink(source, dest)
 
+
 class CopyConfigAction(ConfigAction):
     pass #TODO
+
+
+class ProgrammableConfigAction(ConfigAction):
+    matched = re.compile("\.p\.py$")
+
+    @classmethod
+    def matches(cls, filename):
+        if cls.matched.search(filename):
+            return cls.matched.sub("", filename)
+        return False
+
+    def check(self):
+        #TODO ignore()
+        class SymlinkForwarder(Exception):
+            def __init__(self, filename):
+                self.filename = filename
+
+        def redirect(filename):
+            raise SymlinkForwarder("_"+filename)
+
+        exec_env = \
+        {
+            "options": self.config.options,
+            "redirect": redirect
+        }
+
+        source = self.source_path()
+        try:
+            exec compile(open(source).read(), source, 'exec') \
+                in exec_env
+        except SymlinkForwarder as e:
+            self.proxy = SymlinkConfigAction(self.config, self.relpath, e.filename, self.dest)
+        else:
+            raise Exception("Unknown result")
+
+        return self.proxy.check()
+
+    def sync(self):
+        return self.proxy.sync()
+
+    def __repr__(self):
+        return self.__class__.__name__+': '+self.source+' => PROXY '+repr(self.proxy)
+
 
 
 class IgnoreConfigAction(ConfigAction):
@@ -80,7 +128,7 @@ class IgnoreConfigAction(ConfigAction):
 
 
 class ConfigSource(object):
-    def __init__(self, source, dest, classes = None):
+    def __init__(self, source, dest, classes = None, options = None):
         # handle '~'
         self.source = os.path.expanduser(source)
         self.dest = os.path.expanduser(dest)
@@ -89,9 +137,15 @@ class ConfigSource(object):
             self.classes = classes
         else:
             self.classes = [
+                ProgrammableConfigAction,
                 IgnoreConfigAction,
                 SymlinkConfigAction,
             ]
+
+        if options:
+            self.options = options
+        else:
+            self.options = []
 
     def analyze(self):
         def walker(_, path, files):

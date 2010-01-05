@@ -2,10 +2,17 @@
 
 from confman import ConfigSource
 
-c = ConfigSource("~/dotfiles", "/tmp/dotfiles-test")
+options = \
+{
+    'tags': ['desktop'],
+    'hostname': 'test',
+}
+
+c = ConfigSource("~/dotfiles", "/tmp/dotfiles-test", None, options)
 c.analyze()
 c.check()
 c.sync()
 
+print
 from pprint import pprint
 pprint(c)

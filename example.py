@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 from confman import ConfigSource
 
 options = \
@@ -8,7 +7,11 @@ options = \
     'hostname': 'test',
 }
 
-c = ConfigSource("~/dotfiles", "/tmp/dotfiles-test", None, options)
+from sys import argv
+from os import path
+samples_path = path.join(path.dirname(argv[0]), 'samples')
+
+c = ConfigSource(samples_path, "/tmp/dotfiles-test", None, options)
 c.analyze()
 c.check()
 c.sync()

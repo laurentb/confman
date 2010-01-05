@@ -86,13 +86,20 @@ class ProgrammableConfigAction(ConfigAction):
             def __init__(self, filename):
                 self.filename = filename
 
+        class IgnoreForwarder(Exception):
+            pass
+
         def redirect(filename):
             raise SymlinkForwarder("_"+filename)
+
+        def ignore():
+            raise IgnoreForwarder()
 
         exec_env = \
         {
             "options": self.config.options,
-            "redirect": redirect
+            "redirect": redirect,
+            "ignore": ignore,
         }
 
         source = self.source_path()
@@ -101,13 +108,17 @@ class ProgrammableConfigAction(ConfigAction):
                 in exec_env
         except SymlinkForwarder as e:
             self.proxy = SymlinkConfigAction(self.config, self.relpath, e.filename, self.dest)
+        except IgnoreForwarder as e:
+            self.proxy = None
         else:
             raise Exception("Unknown result")
 
-        return self.proxy.check()
+        if not self.proxy is None:
+            return self.proxy.check()
 
     def sync(self):
-        return self.proxy.sync()
+        if not self.proxy is None:
+            return self.proxy.sync()
 
     def __repr__(self):
         return self.__class__.__name__+': '+self.source+' => PROXY '+repr(self.proxy)

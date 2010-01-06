@@ -74,7 +74,7 @@ class SymlinkConfigAction(ConfigAction):
         else:
             self._makedirs()
 
-        relsource = os.path.relpath(source, self.config.dest)
+        relsource = os.path.normpath(os.path.relpath(source, os.path.join(self.config.dest, self.relpath)))
         os.symlink(relsource, dest)
         print "Created new link: "+dest+" => "+source
 

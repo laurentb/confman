@@ -54,8 +54,11 @@ class SymlinkConfigAction(ConfigAction):
         source = self.source_path()
         dest = self.dest_path()
         if os.path.lexists(dest):
+            # if the link already exists
             if os.path.islink(dest):
-                if not os.path.samefile(dest, source):
+                # if the old link is broken or incorrect
+                if not os.path.exists(dest) \
+                or not os.path.samefile(dest, source):
                     os.unlink(dest)
                     print "Link target altered"
                 else:
@@ -63,8 +66,9 @@ class SymlinkConfigAction(ConfigAction):
         else:
             self._makedirs()
 
+        relsource = os.path.relpath(source, self.config.dest)
+        os.symlink(relsource, dest)
         print "Created new link: "+dest+" => "+source
-        os.symlink(source, dest)
 
 
 class CopyConfigAction(ConfigAction):

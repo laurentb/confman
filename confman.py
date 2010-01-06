@@ -81,7 +81,6 @@ class ProgrammableConfigAction(ConfigAction):
         return False
 
     def check(self):
-        #TODO ignore()
         class SymlinkForwarder(Exception):
             def __init__(self, filename):
                 self.filename = filename

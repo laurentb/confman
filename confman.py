@@ -1,6 +1,14 @@
 import os
 import re
 
+class ConfigActionException(Exception):
+    def __init__(self, action, value):
+        self.action = action
+        super(self.__class__, self).__init__(value)
+
+    def __str__(self):
+        return super(self.__class__, self).__str__() + " (" + repr(self.action) + ")"
+
 class ConfigAction(object):
     @classmethod
     def matches(cls, filename):
@@ -43,12 +51,12 @@ class SymlinkConfigAction(ConfigAction):
     def check(self):
         source = self.source_path()
         if not os.path.exists(source):
-            raise Exception("Source does not exists")
+            raise ConfigActionException(self, "Source does not exists")
 
         dest = self.dest_path()
         if os.path.lexists(dest):
             if not os.path.islink(dest):
-                raise Exception("Destination exists and is not a link")
+                raise ConfigActionException(self, "Destination exists and is not a link")
 
     def sync(self):
         source = self.source_path()
@@ -114,7 +122,7 @@ class ProgrammableConfigAction(ConfigAction):
         except IgnoreForwarder as e:
             self.proxy = None
         else:
-            raise Exception("Unknown result")
+            raise ConfigActionException(self, "Unknown result")
 
         if not self.proxy is None:
             return self.proxy.check()
@@ -177,7 +185,7 @@ class ConfigSource(object):
                 dest = cls.matches(filename)
                 if dest is not False:
                     return (cls, dest)
-            raise Exception("No class found")
+            raise Exception("No class found for "+os.path.join(relpath, filename))
 
         cls, dest = get_file_class(filename)
 

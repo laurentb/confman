@@ -7,9 +7,8 @@ options = \
     'hostname': 'test',
 }
 
-from sys import argv
 from os import path
-samples_path = path.join(path.dirname(argv[0]), 'samples')
+samples_path = path.join(path.dirname(__file__), 'samples')
 
 c = ConfigSource(samples_path, "/tmp/dotfiles-test", None, options)
 c.analyze()

@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 import os
 import re
 
@@ -115,8 +117,8 @@ class ProgrammableConfigAction(ConfigAction):
 
         source = self.source_path()
         try:
-            exec compile(open(source).read(), source, 'exec') \
-                in exec_env
+            with open(source, "r") as file:
+                exec compile(file.read(), source, 'exec') in exec_env
         except SymlinkForwarder as e:
             self.proxy = SymlinkConfigAction(self.config, self.relpath, e.filename, self.dest)
         except IgnoreForwarder as e:

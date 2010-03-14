@@ -11,8 +11,6 @@ from os import path
 samples_path = path.join(path.dirname(__file__), 'samples')
 
 c = ConfigSource(samples_path, "/tmp/dotfiles-test", None, options)
-c.analyze()
-c.check()
 c.sync()
 
 print

@@ -171,7 +171,13 @@ class ConfigSource(object):
         else:
             self.options = []
 
+    def sync(self):
+        "gather files and synchronize them"
+        self.analyze()
+        self.execute()
+
     def analyze(self):
+        "gather all files"
         def walker(_, path, files):
             relpath = os.path.relpath(path, self.source)
             for filename in (file for file in files \
@@ -182,6 +188,7 @@ class ConfigSource(object):
         os.path.walk(self.source, walker, None)
 
     def add(self, relpath, filename):
+        "add a file if it can be associated to an action"
         def get_file_class(filename):
             for cls in self.classes:
                 dest = cls.matches(filename)
@@ -197,15 +204,15 @@ class ConfigSource(object):
                 raise Exception('Conflict: '+filename+' with '+files[dest])
             files[dest] = cls(self, relpath, filename, dest)
 
-    def check(self):
+    def execute(self):
+        "executes all actions if everything is alright"
         for file in self:
             file.check()
-
-    def sync(self):
         for file in self:
             file.sync()
 
     def __iter__(self):
+        "iterate over all analyzed files"
         for files in self.tree.itervalues():
             for file in files.itervalues():
                 yield file

@@ -3,7 +3,7 @@ from __future__ import with_statement
 import os
 import re
 
-class ConfigActionException(Exception):
+class ActionException(Exception):
     def __init__(self, action, value):
         self.action = action
         super(self.__class__, self).__init__(value)
@@ -11,10 +11,11 @@ class ConfigActionException(Exception):
     def __str__(self):
         return super(self.__class__, self).__str__() + " (" + repr(self.action) + ")"
 
-class ConfigAction(object):
+
+class Action(object):
     @classmethod
     def matches(cls, filename):
-        raise Exception('Not implemented')
+        raise NotImplementedError()
 
     def __init__(self, config, relpath, source, dest):
         self.source = source
@@ -26,10 +27,10 @@ class ConfigAction(object):
         return self.__class__.__name__+': '+self.source+' => '+self.dest
 
     def check(self):
-        raise Exception('Not implemented')
+        raise NotImplementedError()
 
     def sync(self):
-        raise Exception('Not implemented')
+        raise NotImplementedError()
 
     def dest_path(self):
         return os.path.normpath(\
@@ -45,7 +46,7 @@ class ConfigAction(object):
             os.makedirs(dir)
 
 
-class SymlinkConfigAction(ConfigAction):
+class SymlinkAction(Action):
     @classmethod
     def matches(cls, filename):
         return filename
@@ -53,12 +54,12 @@ class SymlinkConfigAction(ConfigAction):
     def check(self):
         source = self.source_path()
         if not os.path.exists(source):
-            raise ConfigActionException(self, "Source does not exists")
+            raise ActionException(self, "Source does not exists")
 
         dest = self.dest_path()
         if os.path.lexists(dest):
             if not os.path.islink(dest):
-                raise ConfigActionException(self, "Destination exists and is not a link")
+                raise ActionException(self, "Destination exists and is not a link")
 
     def sync(self):
         source = self.source_path()
@@ -81,11 +82,29 @@ class SymlinkConfigAction(ConfigAction):
         print "Created new link: "+dest+" => "+source
 
 
-class CopyConfigAction(ConfigAction):
+class CopyAction(Action):
     pass #TODO
 
 
-class ProgrammableConfigAction(ConfigAction):
+class Forwarder(Exception):
+    def get_proxy(self, parent):
+        raise NotImplementedError()
+
+
+class SymlinkForwarder(Forwarder):
+    def __init__(self, filename):
+        self.filename = filename
+
+    def get_proxy(self, parent):
+        return SymlinkAction(parent.config, parent.relpath, self.filename, parent.dest)
+
+
+class IgnoreForwarder(Forwarder):
+    def get_proxy(self, parent):
+        return None
+
+
+class ProgrammableAction(Action):
     matched = re.compile("\.p\.py$")
 
     @classmethod
@@ -94,14 +113,11 @@ class ProgrammableConfigAction(ConfigAction):
             return cls.matched.sub("", filename)
         return False
 
-    def check(self):
-        class SymlinkForwarder(Exception):
-            def __init__(self, filename):
-                self.filename = filename
-
-        class IgnoreForwarder(Exception):
-            pass
-
+    def get_env(self):
+        """
+        get limited environment execution
+        this function could be overloaded to add some custom methods
+        """
         def redirect(filename):
             raise SymlinkForwarder("_"+filename)
 
@@ -115,16 +131,18 @@ class ProgrammableConfigAction(ConfigAction):
             "ignore": ignore,
         }
 
+        return exec_env
+
+    def check(self):
         source = self.source_path()
         try:
             with open(source, "r") as file:
+                exec_env = self.get_env()
                 exec compile(file.read(), source, 'exec') in exec_env
-        except SymlinkForwarder as e:
-            self.proxy = SymlinkConfigAction(self.config, self.relpath, e.filename, self.dest)
-        except IgnoreForwarder as e:
-            self.proxy = None
+        except Forwarder, e:
+            self.proxy = e.get_proxy(self)
         else:
-            raise ConfigActionException(self, "Unknown result")
+            raise ActionException(self, "Unknown result")
 
         if not self.proxy is None:
             return self.proxy.check()
@@ -137,8 +155,7 @@ class ProgrammableConfigAction(ConfigAction):
         return self.__class__.__name__+': '+self.source+' => PROXY '+repr(self.proxy)
 
 
-
-class IgnoreConfigAction(ConfigAction):
+class IgnoreAction(Action):
     ignored = re.compile("_|\.git$|\.gitignore$")
 
     @classmethod
@@ -161,9 +178,9 @@ class ConfigSource(object):
             self.classes = classes
         else:
             self.classes = [
-                ProgrammableConfigAction,
-                IgnoreConfigAction,
-                SymlinkConfigAction,
+                ProgrammableAction,
+                IgnoreAction,
+                SymlinkAction,
             ]
 
         if options:
@@ -187,16 +204,18 @@ class ConfigSource(object):
         self.tree = {}
         os.path.walk(self.source, walker, None)
 
+    def _get_file_class(self, filename):
+        "returns the first class that accepts the file"
+        for cls in self.classes:
+            dest = cls.matches(filename)
+            if dest is not False:
+                return (cls, dest)
+        raise Exception("No class found for "+os.path.join(relpath, filename))
+
     def add(self, relpath, filename):
         "add a file if it can be associated to an action"
-        def get_file_class(filename):
-            for cls in self.classes:
-                dest = cls.matches(filename)
-                if dest is not False:
-                    return (cls, dest)
-            raise Exception("No class found for "+os.path.join(relpath, filename))
 
-        cls, dest = get_file_class(filename)
+        cls, dest = self._get_file_class(filename)
 
         if dest is not None:
             files = self.tree.setdefault(relpath, {})

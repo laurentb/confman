@@ -88,6 +88,38 @@ class SymlinkAction(Action):
         print "Created new link: "+dest+" => "+source
 
 
+class EmptyAction(Action):
+    """
+    Ensures the destination file exists.
+    Creates an empty one if not.
+    """
+    matched = re.compile("\.empty$")
+
+    @classmethod
+    def matches(cls, filename):
+        if cls.matched.search(filename):
+            return cls.matched.sub("", filename)
+        return False
+
+    def check(self):
+        pass
+
+    def sync(self):
+        dest = self.dest_path()
+        # if the file does not exist
+        if not os.path.exists(dest):
+            # but it's a broken link
+            if os.path.islink(dest):
+                raise ActionException(self, "Destination is a broken link")
+            else:
+                self._makedirs()
+                open(dest, "w").close()
+                print "Created new empty file: "+dest
+
+    def __repr__(self):
+        return self.__class__.__name__+': EMPTY => '+self.dest
+
+
 class CopyAction(Action):
     pass #TODO
 
@@ -103,6 +135,11 @@ class SymlinkForwarder(Forwarder):
 
     def get_proxy(self, parent):
         return SymlinkAction(parent.config, parent.relpath, self.filename, parent.dest)
+
+
+class EmptyForwarder(Forwarder):
+    def get_proxy(self, parent):
+        return EmptyAction(parent.config, parent.relpath, None, parent.dest)
 
 
 class IgnoreForwarder(Forwarder):
@@ -127,6 +164,9 @@ class ProgrammableAction(Action):
         def redirect(filename):
             raise SymlinkForwarder("_"+filename)
 
+        def empty():
+            raise EmptyForwarder()
+
         def ignore():
             raise IgnoreForwarder()
 
@@ -134,6 +174,7 @@ class ProgrammableAction(Action):
         {
             "options": self.config.options,
             "redirect": redirect,
+            "empty": empty,
             "ignore": ignore,
         }
 
@@ -186,6 +227,7 @@ class ConfigSource(object):
             self.classes = [
                 ProgrammableAction,
                 IgnoreAction,
+                EmptyAction,
                 SymlinkAction,
             ]
 

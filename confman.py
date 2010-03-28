@@ -15,6 +15,12 @@ class ActionException(Exception):
 class Action(object):
     @classmethod
     def matches(cls, filename):
+        """
+        Tells if the file should be associated with this action.
+        Returns False if not; confman will try with the next class.
+        Returns None if the file should be ignored.
+        Returns the destination filename (str) if it matches.
+        """
         raise NotImplementedError()
 
     def __init__(self, config, relpath, source, dest):
@@ -115,8 +121,8 @@ class ProgrammableAction(Action):
 
     def get_env(self):
         """
-        get limited environment execution
-        this function could be overloaded to add some custom methods
+        Get limited environment execution.
+        This function could be overloaded to add some custom methods.
         """
         def redirect(filename):
             raise SymlinkForwarder("_"+filename)
@@ -189,12 +195,12 @@ class ConfigSource(object):
             self.options = []
 
     def sync(self):
-        "gather files and synchronize them"
+        "Gather files and synchronize them."
         self.analyze()
         self.execute()
 
     def analyze(self):
-        "gather all files"
+        "Gather all files."
         def walker(_, path, files):
             relpath = os.path.relpath(path, self.source)
             for filename in (file for file in files \
@@ -205,7 +211,10 @@ class ConfigSource(object):
         os.path.walk(self.source, walker, None)
 
     def _get_file_class(self, filename):
-        "returns the first class that accepts the file"
+        """
+        Returns the first class that accepts (matches) the file.
+        It will fail if no class accepts or tells to ignore.
+        """
         for cls in self.classes:
             dest = cls.matches(filename)
             if dest is not False:
@@ -213,8 +222,10 @@ class ConfigSource(object):
         raise Exception("No class found for "+os.path.join(relpath, filename))
 
     def add(self, relpath, filename):
-        "add a file if it can be associated to an action"
-
+        """
+        Add a file if it can be associated to an action.
+        filename is the destination filename; it will check for conflicts
+        """
         cls, dest = self._get_file_class(filename)
 
         if dest is not None:
@@ -224,14 +235,14 @@ class ConfigSource(object):
             files[dest] = cls(self, relpath, filename, dest)
 
     def execute(self):
-        "executes all actions if everything is alright"
+        "Executes all actions if everything is alright."
         for file in self:
             file.check()
         for file in self:
             file.sync()
 
     def __iter__(self):
-        "iterate over all analyzed files"
+        "Iterates over all analyzed files."
         for files in self.tree.itervalues():
             for file in files.itervalues():
                 yield file

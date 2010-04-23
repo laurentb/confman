@@ -30,7 +30,7 @@ class Action(object):
         self.config = config
 
     def __repr__(self):
-        return self.__class__.__name__+': '+self.source+' => '+self.dest
+        return self.__class__.__name__+": "+self.source+" => "+self.dest
 
     def check(self):
         raise NotImplementedError()
@@ -117,7 +117,7 @@ class EmptyAction(Action):
                 print "Created new empty file: "+dest
 
     def __repr__(self):
-        return self.__class__.__name__+': EMPTY => '+self.dest
+        return self.__class__.__name__+": EMPTY => "+self.dest
 
 
 class CopyAction(Action):
@@ -185,7 +185,7 @@ class ProgrammableAction(Action):
         try:
             with open(source, "r") as file:
                 exec_env = self.get_env()
-                exec compile(file.read(), source, 'exec') in exec_env
+                exec compile(file.read(), source, "exec") in exec_env
         except Forwarder, e:
             self.proxy = e.get_proxy(self)
         else:
@@ -199,7 +199,7 @@ class ProgrammableAction(Action):
             return self.proxy.sync()
 
     def __repr__(self):
-        return self.__class__.__name__+': '+self.source+' => PROXY '+repr(self.proxy)
+        return self.__class__.__name__+": "+self.source+" => PROXY "+repr(self.proxy)
 
 
 class IgnoreAction(Action):
@@ -212,7 +212,7 @@ class IgnoreAction(Action):
         return False
 
     def __repr__(self):
-        return self.__class__.__name__+': '+self.source+' => IGNORED'
+        return self.__class__.__name__+": "+self.source+" => IGNORED"
 
 
 class ConfigSource(object):
@@ -261,7 +261,7 @@ class ConfigSource(object):
             dest = cls.matches(filename)
             if dest is not False:
                 return (cls, dest)
-        raise Exception("No class found for "+os.path.join(relpath, filename))
+        raise Exception("No class found for "+filename)
 
     def add(self, relpath, filename):
         """
@@ -273,7 +273,7 @@ class ConfigSource(object):
         if dest is not None:
             files = self.tree.setdefault(relpath, {})
             if files.has_key(dest):
-                raise Exception('Conflict: '+filename+' with '+files[dest])
+                raise Exception("Conflict: "+filename+" with "+files[dest])
             files[dest] = cls(self, relpath, filename, dest)
 
     def execute(self):
@@ -291,5 +291,5 @@ class ConfigSource(object):
 
     def __repr__(self):
         return "\n".join(\
-            (action.relpath+': '+repr(action) for action in self))
+            (action.relpath+": "+repr(action) for action in self))
 

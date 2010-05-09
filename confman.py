@@ -30,7 +30,7 @@ class Action(object):
         self.config = config
 
     def __repr__(self):
-        return self.__class__.__name__+": "+self.source+" => "+self.dest
+        return self.__class__.__name__+": "+self.relpath+"/"+self.source+" => "+self.dest
 
     def check(self):
         raise NotImplementedError()

@@ -2,6 +2,29 @@ from __future__ import with_statement
 
 import os
 import re
+import os.path as osp
+
+# Python <2.6 compatibility
+try:
+    from os.path import relpath as osp_relpath
+except ImportError:
+    def osp_relpath(path, start=osp.curdir):
+        """Return a relative version of a path"""
+
+        if not path:
+            raise ValueError("no path specified")
+
+        start_list = osp.abspath(start).split(osp.sep)
+        path_list = osp.abspath(path).split(osp.sep)
+
+        # Work out how much of the filepath is shared by start and path.
+        i = len(osp.commonprefix([start_list, path_list]))
+
+        rel_list = [osp.pardir] * (len(start_list)-i) + path_list[i:]
+        if not rel_list:
+            return osp.curdir
+        return osp.join(*rel_list)
+
 
 class ActionException(Exception):
     def __init__(self, action, value):
@@ -39,16 +62,16 @@ class Action(object):
         raise NotImplementedError()
 
     def dest_path(self):
-        return os.path.normpath(\
-            os.path.join(self.config.dest, self.relpath, self.dest))
+        return osp.normpath(\
+            osp.join(self.config.dest, self.relpath, self.dest))
 
     def source_path(self):
-        return os.path.normpath(\
-            os.path.join(self.config.source, self.relpath, self.source))
+        return osp.normpath(\
+            osp.join(self.config.source, self.relpath, self.source))
 
     def _makedirs(self):
-        dir = os.path.dirname(self.dest_path())
-        if not os.path.isdir(dir):
+        dir = osp.dirname(self.dest_path())
+        if not osp.isdir(dir):
             os.makedirs(dir)
 
 
@@ -59,23 +82,23 @@ class SymlinkAction(Action):
 
     def check(self):
         source = self.source_path()
-        if not os.path.exists(source):
+        if not osp.exists(source):
             raise ActionException(self, "Source does not exists")
 
         dest = self.dest_path()
-        if os.path.lexists(dest):
-            if not os.path.islink(dest):
+        if osp.lexists(dest):
+            if not osp.islink(dest):
                 raise ActionException(self, "Destination exists and is not a link")
 
     def sync(self):
         source = self.source_path()
         dest = self.dest_path()
-        if os.path.lexists(dest):
+        if osp.lexists(dest):
             # if the link already exists
-            if os.path.islink(dest):
+            if osp.islink(dest):
                 # if the old link is broken or incorrect
-                if not os.path.exists(dest) \
-                or not os.path.samefile(dest, source):
+                if not osp.exists(dest) \
+                or not osp.samefile(dest, source):
                     os.unlink(dest)
                     print "Link target altered"
                 else:
@@ -83,7 +106,7 @@ class SymlinkAction(Action):
         else:
             self._makedirs()
 
-        relsource = os.path.normpath(os.path.relpath(source, os.path.join(self.config.dest, self.relpath)))
+        relsource = osp.normpath(osp_relpath(source, osp.join(self.config.dest, self.relpath)))
         os.symlink(relsource, dest)
         print "Created new link: "+dest+" => "+source
 
@@ -107,9 +130,9 @@ class EmptyAction(Action):
     def sync(self):
         dest = self.dest_path()
         # if the file does not exist
-        if not os.path.exists(dest):
+        if not osp.exists(dest):
             # but it's a broken link
-            if os.path.islink(dest):
+            if osp.islink(dest):
                 raise ActionException(self, "Destination is a broken link")
             else:
                 self._makedirs()
@@ -218,8 +241,8 @@ class IgnoreAction(Action):
 class ConfigSource(object):
     def __init__(self, source, dest, classes = None, options = None):
         # handle '~'
-        self.source = os.path.expanduser(source)
-        self.dest = os.path.expanduser(dest)
+        self.source = osp.expanduser(source)
+        self.dest = osp.expanduser(dest)
 
         if classes:
             self.classes = classes
@@ -244,13 +267,13 @@ class ConfigSource(object):
     def analyze(self):
         "Gather all files."
         def walker(_, path, files):
-            relpath = os.path.relpath(path, self.source)
+            relpath = osp_relpath(path, self.source)
             for filename in (file for file in files \
-            if not os.path.isdir(os.path.join(path, file))):
+            if not osp.isdir(osp.join(path, file))):
                 self.add(relpath, filename)
 
         self.tree = {}
-        os.path.walk(self.source, walker, None)
+        osp.walk(self.source, walker, None)
 
     def _get_file_class(self, filename):
         """

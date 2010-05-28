@@ -184,6 +184,8 @@ class ProgrammableAction(Action):
         Get limited environment execution.
         This function could be overloaded to add some custom methods.
         """
+        options = self.config.options
+
         def redirect(filename):
             raise SymlinkForwarder("_"+filename)
 
@@ -193,15 +195,7 @@ class ProgrammableAction(Action):
         def ignore():
             raise IgnoreForwarder()
 
-        exec_env = \
-        {
-            "options": self.config.options,
-            "redirect": redirect,
-            "empty": empty,
-            "ignore": ignore,
-        }
-
-        return exec_env
+        return locals()
 
     def check(self):
         source = self.source_path()

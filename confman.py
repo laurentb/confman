@@ -164,10 +164,13 @@ class TextAction(Action):
         if osp.islink(dest):
             raise ActionException(self, "Destination is a link")
         else:
+            self._makedirs()
             with open(dest, "a+") as destfile:
                 if destfile.read() != self.text:
-                    destfile.truncate()
+                    print "Updated file contents: "+dest
+                    destfile.truncate(0)
                     destfile.write(self.text)
+
 
     def __repr__(self):
         return self.__class__.__name__+": TEXT => "+self.dest

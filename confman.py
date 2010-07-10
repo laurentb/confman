@@ -112,40 +112,9 @@ class SymlinkAction(Action):
         print "Created new link: "+dest+" => "+source
 
 
-class EmptyAction(Action):
-    """
-    Ensures the destination file exists.
-    Creates an empty one if not.
-    TODO it should be a CopyAction with a "do not erase" parameter
-    """
-    matched = re.compile("\.empty$")
-
-    @classmethod
-    def matches(cls, filename):
-        if cls.matched.search(filename):
-            return cls.matched.sub("", filename)
-        return False
-
-    def check(self):
-        pass
-
-    def sync(self):
-        dest = self.dest_path()
-        # if the file does not exist
-        if not osp.exists(dest):
-            # but it's a broken link
-            if osp.islink(dest):
-                raise ActionException(self, "Destination is a broken link")
-            else:
-                self._makedirs()
-                with open(dest, "w") as destfile:
-                    print "Created new empty file: "+destfile.name
-
-    def __repr__(self):
-        return self.__class__.__name__+": EMPTY => "+self.dest
-
-
 class TextAction(Action):
+    once = False
+
     def check(self):
         """
         This action can't be invoked by a file;
@@ -161,16 +130,19 @@ class TextAction(Action):
         Write the file only if necessary
         """
         dest = self.dest_path()
+        exists = osp.exists(dest)
         if osp.islink(dest):
             raise ActionException(self, "Destination is a link")
         else:
             self._makedirs()
             with open(dest, "a+") as destfile:
                 if destfile.read() != self.text:
-                    print "Updated file contents: "+dest
-                    destfile.truncate(0)
-                    destfile.write(self.text)
-
+                    if exists and self.once:
+                        print "File already exists, not updated: "+dest
+                    else:
+                        print "Updated file contents: "+dest
+                        destfile.truncate(0)
+                        destfile.write(self.text)
 
     def __repr__(self):
         return self.__class__.__name__+": TEXT => "+self.dest
@@ -185,13 +157,44 @@ class CopyAction(TextAction):
             return cls.matched.sub("", filename)
         return False
 
-    def text(self):
+    def check(self):
         """
         Retrieve the text from the source file
         """
         source = self.source_path()
         with open(source, "r") as sourcefile:
             self.text = sourcefile.read()
+
+
+class CopyOnceAction(CopyAction):
+    once = True
+    matched = re.compile("\.copyonce$")
+
+    @classmethod
+    def matches(cls, filename):
+        if cls.matched.search(filename):
+            return cls.matched.sub("", filename)
+        return False
+
+
+class EmptyAction(CopyOnceAction):
+    """
+    Ensures the destination file exists.
+    Creates an empty one if not.
+    """
+    matched = re.compile("\.empty$")
+
+    @classmethod
+    def matches(cls, filename):
+        if cls.matched.search(filename):
+            return cls.matched.sub("", filename)
+        return False
+
+    def check(self):
+        self.text = ""
+
+    def __repr__(self):
+        return self.__class__.__name__+": EMPTY => "+self.dest
 
 
 class Forwarder(Exception):
@@ -319,6 +322,7 @@ class ConfigSource(object):
                 IgnoreAction,
                 EmptyAction,
                 CopyAction,
+                CopyOnceAction,
                 SymlinkAction,
             ]
 

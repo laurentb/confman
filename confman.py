@@ -27,7 +27,13 @@ except ImportError:
         return osp.join(*rel_list)
 
 
-class ActionException(Exception):
+class ConfmanException(Exception):
+    """
+    Should remain empty.
+    """
+    pass
+
+class ActionException(ConfmanException):
     def __init__(self, action, value):
         self.action = action
         super(self.__class__, self).__init__(value)
@@ -159,7 +165,7 @@ class CopyAction(TextAction):
 
     def check(self):
         """
-        Retrieve the text from the source file
+        Retrieve the text from the source file.
         """
         source = self.source_path()
         with open(source, "r") as sourcefile:
@@ -197,7 +203,11 @@ class EmptyAction(CopyOnceAction):
         return self.__class__.__name__+": EMPTY => "+self.dest
 
 
-class Forwarder(Exception):
+class Forwarder(ConfmanException):
+    """
+    Not really an error, it is used to go back to confman with a value
+    when executing a ProgrammableAction.
+    """
     def get_proxy(self, parent):
         raise NotImplementedError()
 
@@ -356,7 +366,7 @@ class ConfigSource(object):
             dest = cls.matches(filename)
             if dest is not False:
                 return (cls, dest)
-        raise Exception("No class found for "+filename)
+        raise ConfmanException("No class found for "+filename)
 
     def add(self, relpath, filename):
         """
@@ -368,7 +378,7 @@ class ConfigSource(object):
         if dest is not None:
             files = self.tree.setdefault(relpath, {})
             if files.has_key(dest):
-                raise Exception("Conflict: "+filename+" with "+files[dest])
+                raise ConfmanException("Conflict: "+filename+" with "+files[dest])
             files[dest] = cls(self, relpath, filename, dest)
 
     def execute(self):

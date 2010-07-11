@@ -317,6 +317,14 @@ class IgnoreAction(Action):
     def __repr__(self):
         return self.__class__.__name__+": "+self.source+" => IGNORED"
 
+DEFAULT_CLASSES = [
+    ProgrammableAction,
+    IgnoreAction,
+    EmptyAction,
+    CopyAction,
+    CopyOnceAction,
+    SymlinkAction,
+]
 
 class ConfigSource(object):
     def __init__(self, source, dest, classes = None, options = None):
@@ -324,30 +332,21 @@ class ConfigSource(object):
         self.source = osp.expanduser(source)
         self.dest = osp.expanduser(dest)
 
-        if classes:
-            self.classes = classes
-        else:
-            self.classes = [
-                ProgrammableAction,
-                IgnoreAction,
-                EmptyAction,
-                CopyAction,
-                CopyOnceAction,
-                SymlinkAction,
-            ]
-
-        if options:
-            self.options = options
-        else:
-            self.options = []
+        self.classes = classes or DEFAULT_CLASSES
+        self.options = options
 
     def sync(self):
-        "Gather files and synchronize them."
+        """
+        Gather files and synchronize them.
+        """
+        print "Synchronizing files from "+self.source+" to "+self.dest+"..."
         self.analyze()
         self.execute()
 
     def analyze(self):
-        "Gather all files."
+        """
+        Gather all files.
+        """
         def walker(_, path, files):
             relpath = osp_relpath(path, self.source)
             for filename in (file for file in files \
@@ -371,7 +370,7 @@ class ConfigSource(object):
     def add(self, relpath, filename):
         """
         Add a file if it can be associated to an action.
-        filename is the destination filename; it will check for conflicts
+        filename is the destination filename; it will check for conflicts.
         """
         cls, dest = self._get_file_class(filename)
 
@@ -382,14 +381,18 @@ class ConfigSource(object):
             files[dest] = cls(self, relpath, filename, dest)
 
     def execute(self):
-        "Executes all actions if everything is alright."
+        """
+        Executes all actions if everything is alright.
+        """
         for file in self:
             file.check()
         for file in self:
             file.sync()
 
     def __iter__(self):
-        "Iterates over all analyzed files."
+        """
+        Iterates over all analyzed files.
+        """
         for files in self.tree.itervalues():
             for file in files.itervalues():
                 yield file

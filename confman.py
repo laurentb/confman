@@ -39,7 +39,7 @@ class ActionException(ConfmanException):
         super(self.__class__, self).__init__(value)
 
     def __str__(self):
-        return super(self.__class__, self).__str__() + " (" + repr(self.action) + ")"
+        return "%s (%s)" % (super(self.__class__, self).__str__(), repr(self.action))
 
 
 class Action(object):
@@ -60,7 +60,7 @@ class Action(object):
         self.dest = dest
 
     def __repr__(self):
-        return self.__class__.__name__+": "+self.relpath+"/"+self.source+" => "+self.dest
+        return "%s: %s => %s" % (self.__class__.__name__, osp.join(self.relpath, self.source), self.dest)
 
     def check(self):
         raise NotImplementedError()
@@ -115,7 +115,7 @@ class SymlinkAction(Action):
 
         relsource = osp.normpath(osp_relpath(source, osp.join(self.config.dest, self.relpath)))
         os.symlink(relsource, dest)
-        print "Created new link: "+dest+" => "+source
+        print "Created new link: %s => %s" % (dest, source)
 
 
 class TextAction(Action):
@@ -144,18 +144,18 @@ class TextAction(Action):
             with open(dest, "a+") as destfile:
                 if destfile.read() != self.text:
                     if exists and self.once:
-                        print "File already exists, not updated: "+dest
+                        print "File already exists, not updated: %s" % dest
                     else:
-                        print "Updated file contents: "+dest
+                        print "Updated file contents: %s" % dest
                         destfile.truncate(0)
                         destfile.write(self.text)
 
     def __repr__(self):
-        return self.__class__.__name__+": TEXT => "+self.dest
+        return "%s: TEXT => %s" % (self.__class__.__name__, self.dest)
 
 
 class CopyAction(TextAction):
-    matched = re.compile("\.copy$")
+    matched = re.compile(r"\.copy$")
 
     @classmethod
     def matches(cls, filename):
@@ -174,7 +174,7 @@ class CopyAction(TextAction):
 
 class CopyOnceAction(CopyAction):
     once = True
-    matched = re.compile("\.copyonce$")
+    matched = re.compile(r"\.copyonce$")
 
     @classmethod
     def matches(cls, filename):
@@ -188,7 +188,7 @@ class EmptyAction(CopyOnceAction):
     Ensures the destination file exists.
     Creates an empty one if not.
     """
-    matched = re.compile("\.empty$")
+    matched = re.compile(r"\.empty$")
 
     @classmethod
     def matches(cls, filename):
@@ -200,7 +200,7 @@ class EmptyAction(CopyOnceAction):
         self.text = ""
 
     def __repr__(self):
-        return self.__class__.__name__+": EMPTY => "+self.dest
+        return "%s: EMPTY => %s" % (self.__class__.__name__, self.dest)
 
 
 class Forwarder(ConfmanException):
@@ -240,7 +240,7 @@ class IgnoreForwarder(Forwarder):
 
 
 class ProgrammableAction(Action):
-    matched = re.compile("\.p\.py$")
+    matched = re.compile(r"\.p\.py$")
 
     @classmethod
     def matches(cls, filename):
@@ -256,7 +256,7 @@ class ProgrammableAction(Action):
         options = self.config.options
 
         def redirect(filename):
-            raise SymlinkForwarder("_"+filename)
+            raise SymlinkForwarder("_%s" % filename)
 
         def empty():
             raise EmptyForwarder()
@@ -273,7 +273,7 @@ class ProgrammableAction(Action):
                 raise TextForwarder(self.safe_substitute(kws))
 
         def template(name):
-            source = osp.join(osp.dirname(self.source_path()), "_"+name)
+            source = osp.join(osp.dirname(self.source_path()), "_%s" % name)
             with open(source) as handle:
                 text = handle.read()
             return ConfmanTemplate(text)
@@ -302,11 +302,11 @@ class ProgrammableAction(Action):
             return self.proxy.sync()
 
     def __repr__(self):
-        return self.__class__.__name__+": "+self.source+" => PROXY "+repr(self.proxy)
+        return "%s: %s => PROXY %s" % (self.__class__.__name__, self.source, repr(self.proxy))
 
 
 class IgnoreAction(Action):
-    ignored = re.compile("_|\.git$|\.gitignore$")
+    ignored = re.compile(r"_|\.git$|\.gitignore$")
 
     @classmethod
     def matches(cls, filename):
@@ -315,7 +315,7 @@ class IgnoreAction(Action):
         return False
 
     def __repr__(self):
-        return self.__class__.__name__+": "+self.source+" => IGNORED"
+        return "%s: %s => IGNORED" % (self.__class__.__name__, self.source)
 
 DEFAULT_CLASSES = [
     ProgrammableAction,
@@ -339,7 +339,7 @@ class ConfigSource(object):
         """
         Gather files and synchronize them.
         """
-        print "Synchronizing files from "+self.source+" to "+self.dest+"..."
+        print "Synchronizing files from %s to %s..." % (self.source, self.dest)
         self.analyze()
         self.execute()
 
@@ -365,7 +365,7 @@ class ConfigSource(object):
             dest = cls.matches(filename)
             if dest is not False:
                 return (cls, dest)
-        raise ConfmanException("No class found for "+filename)
+        raise ConfmanException("No class found for %s" % filename)
 
     def add(self, relpath, filename):
         """
@@ -377,7 +377,7 @@ class ConfigSource(object):
         if dest is not None:
             files = self.tree.setdefault(relpath, {})
             if files.has_key(dest):
-                raise ConfmanException("Conflict: "+filename+" with "+files[dest])
+                raise ConfmanException("Conflict: %s with %s" % (filename, files[dest]))
             files[dest] = cls(self, relpath, filename, dest)
 
     def execute(self):
@@ -399,5 +399,5 @@ class ConfigSource(object):
 
     def __repr__(self):
         return "\n".join(\
-            (action.relpath+": "+repr(action) for action in self))
+            ("%s: %s" % (action.relpath, repr(action)) for action in self))
 

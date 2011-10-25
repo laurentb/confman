@@ -35,12 +35,16 @@ class ConfmanException(Exception):
 
 
 class ActionException(ConfmanException):
-    def __init__(self, action, value):
+    def __init__(self, action, value, resolve=None):
         self.action = action
+        self.resolve = resolve
         ConfmanException.__init__(self, value)
 
     def __str__(self):
-        return "%s (%s)" % (ConfmanException.__str__(self), repr(self.action))
+        s = "%s (%s)" % (ConfmanException.__str__(self), repr(self.action))
+        if self.resolve:
+            s += "\nResolve the issue with:\n%s" % self.resolve
+        return s
 
 
 class Action(object):
@@ -97,8 +101,10 @@ class SymlinkAction(Action):
         dest = self.dest_path()
         if osp.lexists(dest):
             if not osp.islink(dest):
+                resolve = "diff %s %s\nrm -vi %s" % (osp.abspath(source), osp.abspath(dest), osp.abspath(dest))
                 raise ActionException(self,
-                        "Destination exists and is not a link")
+                        "Destination exists and is not a link",
+                        resolve=resolve)
 
     def sync(self):
         source = self.source_path()

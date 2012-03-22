@@ -365,19 +365,22 @@ class ConfigSource(object):
         """
         Gather all files.
         """
-        def walker(_, path, files):
-            relpath = osp_relpath(path, self.source)
-            for filename in files:
-                isdir = osp.isdir(osp.join(path, filename))
-                if isdir and self.act_as_file.search(filename):
-                    # this list can be modified in place
-                    files.remove(filename)
-                    self.add_dir(relpath, filename)
-                elif not isdir:
-                    self.add(relpath, filename)
-
         self.tree = {}
-        osp.walk(self.source, walker, None)
+        for path, dirs, files in os.walk(self.source, topdown=True):
+            relpath = osp_relpath(path, self.source)
+
+            to_remove = []
+            for filename in dirs:
+                if self.act_as_file.search(filename):
+                    to_remove.append(filename)
+                    self.add_dir(relpath, filename)
+            for filename in to_remove:
+                # this list can be modified in place
+                # but we wust no remove elements when iterating on it!
+                dirs.remove(filename)
+
+            for filename in files:
+                self.add(relpath, filename)
 
     def _get_file_class(self, filename):
         """
@@ -409,8 +412,8 @@ class ConfigSource(object):
         The destination will be deduced, and it will check for conflicts.
         """
         cls, dest = self._get_file_class(filename)
-        dest = self.act_as_file.sub("", dest)
         if dest is not None:
+            dest = self.act_as_file.sub("", dest)
             return self._add(relpath, filename, cls, dest)
 
     def _add(self, relpath, filename, cls, dest):

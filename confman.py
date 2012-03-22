@@ -343,6 +343,8 @@ DEFAULT_CLASSES = [
 
 
 class ConfigSource(object):
+    act_as_file = re.compile(r"\.F$")
+
     def __init__(self, source, dest, classes=None, options=None):
         # handle '~'
         self.source = osp.expanduser(source)
@@ -365,9 +367,14 @@ class ConfigSource(object):
         """
         def walker(_, path, files):
             relpath = osp_relpath(path, self.source)
-            for filename in (file for file in files \
-            if not osp.isdir(osp.join(path, file))):
-                self.add(relpath, filename)
+            for filename in files:
+                isdir = osp.isdir(osp.join(path, filename))
+                if isdir and self.act_as_file.search(filename):
+                    # this list can be modified in place
+                    files.remove(filename)
+                    self.add_dir(relpath, filename)
+                elif not isdir:
+                    self.add(relpath, filename)
 
         self.tree = {}
         osp.walk(self.source, walker, None)
@@ -386,15 +393,31 @@ class ConfigSource(object):
     def add(self, relpath, filename):
         """
         Add a file if it can be associated to an action.
-        filename is the destination filename; it will check for conflicts.
+        filename is the source filename.
+        The destination will be deduced, and it will check for conflicts.
         """
         cls, dest = self._get_file_class(filename)
-
         if dest is not None:
-            files = self.tree.setdefault(relpath, {})
-            if dest in files:
-                raise ConfmanException("Conflict: %s with %s" % (filename, files[dest]))
-            files[dest] = cls(self, relpath, filename, dest)
+            return self._add(relpath, filename, cls, dest)
+
+    def add_dir(self, relpath, filename):
+        """
+        Add a directory as if it was a file.
+        It will try to associate it with a particular file class,
+        though it does not make much sense in most cases.
+        filename is the source filename.
+        The destination will be deduced, and it will check for conflicts.
+        """
+        cls, dest = self._get_file_class(filename)
+        dest = self.act_as_file.sub("", dest)
+        if dest is not None:
+            return self._add(relpath, filename, cls, dest)
+
+    def _add(self, relpath, filename, cls, dest):
+        files = self.tree.setdefault(relpath, {})
+        if dest in files:
+            raise ConfmanException("Conflict: %s with %s" % (filename, files[dest]))
+        files[dest] = cls(self, relpath, filename, dest)
 
     def execute(self):
         """

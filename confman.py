@@ -129,7 +129,7 @@ class SymlinkAction(Action):
 
 
 class TextAction(Action):
-    once = False
+    ONCE = False
 
     def check(self):
         """
@@ -153,7 +153,7 @@ class TextAction(Action):
             self._makedirs()
             with open(dest, "a+") as destfile:
                 if destfile.read() != self.text:
-                    if exists and self.once:
+                    if exists and self.ONCE:
                         print "File already exists, not updated: %s" % dest
                     else:
                         print "Updated file contents: %s" % dest
@@ -165,12 +165,12 @@ class TextAction(Action):
 
 
 class CopyAction(TextAction):
-    matched = re.compile(r"\.copy$")
+    MATCHED = re.compile(r"\.copy$")
 
     @classmethod
     def matches(cls, filename):
-        if cls.matched.search(filename):
-            return cls.matched.sub("", filename)
+        if cls.MATCHED.search(filename):
+            return cls.MATCHED.sub("", filename)
         return False
 
     def check(self):
@@ -183,13 +183,13 @@ class CopyAction(TextAction):
 
 
 class CopyOnceAction(CopyAction):
-    once = True
-    matched = re.compile(r"\.copyonce$")
+    ONCE = True
+    MATCHED = re.compile(r"\.copyonce$")
 
     @classmethod
     def matches(cls, filename):
-        if cls.matched.search(filename):
-            return cls.matched.sub("", filename)
+        if cls.MATCHED.search(filename):
+            return cls.MATCHED.sub("", filename)
         return False
 
 
@@ -198,12 +198,12 @@ class EmptyAction(CopyOnceAction):
     Ensures the destination file exists.
     Creates an empty one if not.
     """
-    matched = re.compile(r"\.empty$")
+    MATCHED = re.compile(r"\.empty$")
 
     @classmethod
     def matches(cls, filename):
-        if cls.matched.search(filename):
-            return cls.matched.sub("", filename)
+        if cls.MATCHED.search(filename):
+            return cls.MATCHED.sub("", filename)
         return False
 
     def check(self):
@@ -253,12 +253,12 @@ class IgnoreForwarder(Forwarder):
 
 
 class ProgrammableAction(Action):
-    matched = re.compile(r"\.p\.py$")
+    MATCHED = re.compile(r"\.p\.py$")
 
     @classmethod
     def matches(cls, filename):
-        if cls.matched.search(filename):
-            return cls.matched.sub("", filename)
+        if cls.MATCHED.search(filename):
+            return cls.MATCHED.sub("", filename)
         return False
 
     def get_env(self):
@@ -320,11 +320,11 @@ class ProgrammableAction(Action):
 
 
 class IgnoreAction(Action):
-    ignored = re.compile(r"_|\.git$|\.gitignore$")
+    IGNORED = re.compile(r"_|\.git$|\.gitignore$")
 
     @classmethod
     def matches(cls, filename):
-        if cls.ignored.match(filename):
+        if cls.IGNORED.match(filename):
             return None
         return False
 
@@ -332,25 +332,23 @@ class IgnoreAction(Action):
         return "%s: %s => IGNORED" % (self.__class__.__name__, self.source)
 
 
-DEFAULT_CLASSES = [
-    ProgrammableAction,
-    IgnoreAction,
-    EmptyAction,
-    CopyAction,
-    CopyOnceAction,
-    SymlinkAction,
-]
-
-
 class ConfigSource(object):
-    act_as_file = re.compile(r"\.F$")
+    DEFAULT_CLASSES = (
+        ProgrammableAction,
+        IgnoreAction,
+        EmptyAction,
+        CopyAction,
+        CopyOnceAction,
+        SymlinkAction,
+    )
+    ACT_AS_FILE = re.compile(r"\.F$")
 
     def __init__(self, source, dest, classes=None, options=None):
         # handle '~'
         self.source = osp.expanduser(source)
         self.dest = osp.expanduser(dest)
 
-        self.classes = classes or DEFAULT_CLASSES
+        self.classes = classes or self.DEFAULT_CLASSES
         self.options = options
 
     def sync(self):
@@ -371,7 +369,7 @@ class ConfigSource(object):
 
             to_remove = []
             for filename in dirs:
-                if self.act_as_file.search(filename):
+                if self.ACT_AS_FILE.search(filename):
                     to_remove.append(filename)
                     self.add_dir(relpath, filename)
             for filename in to_remove:
@@ -413,7 +411,7 @@ class ConfigSource(object):
         """
         cls, dest = self._get_file_class(filename)
         if dest is not None:
-            dest = self.act_as_file.sub("", dest)
+            dest = self.ACT_AS_FILE.sub("", dest)
             return self._add(relpath, filename, cls, dest)
 
     def _add(self, relpath, filename, cls, dest):

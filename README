@@ -1,0 +1,4 @@
+Synchronize config files between machines, lazily, without root permissions, and still be able to create powerful rules when needed.
+
+The project is usable, but has no CLI interface for now.
+Examples are available in example.py and in the public-dotfiles repository.

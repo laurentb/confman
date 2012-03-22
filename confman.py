@@ -424,18 +424,18 @@ class ConfigSource(object):
         """
         Executes all actions if everything is alright.
         """
-        for file in self:
-            file.check()
-        for file in self:
-            file.sync()
+        for f in self:
+            f.check()
+        for f in self:
+            f.sync()
 
     def __iter__(self):
         """
         Iterates over all analyzed files.
         """
         for files in self.tree.itervalues():
-            for file in files.itervalues():
-                yield file
+            for f in files.itervalues():
+                yield f
 
     def __repr__(self):
         return "\n".join(\

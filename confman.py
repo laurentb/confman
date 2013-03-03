@@ -374,7 +374,7 @@ class ConfigSource(object):
                     self.add_dir(relpath, filename)
             for filename in to_remove:
                 # this list can be modified in place
-                # but we wust no remove elements when iterating on it!
+                # but we wust not remove elements when iterating on it!
                 dirs.remove(filename)
 
             for filename in files:

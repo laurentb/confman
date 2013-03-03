@@ -9,7 +9,7 @@ from string import Template
 try:
     from os.path import relpath as osp_relpath
 except ImportError:
-    def osp_relpath(path, start=osp.curdir):
+    def osp_relpath(path, start=osp.curdir):  # NOQA
         """Return a relative version of a path"""
 
         if not path:
@@ -66,7 +66,8 @@ class Action(object):
 
     def __repr__(self):
         return "%s: %s => %s" % (self.__class__.__name__,
-                osp.join(self.relpath, self.source), self.dest)
+                                 osp.join(self.relpath, self.source),
+                                 self.dest)
 
     def check(self):
         raise NotImplementedError()
@@ -75,11 +76,11 @@ class Action(object):
         raise NotImplementedError()
 
     def dest_path(self):
-        return osp.normpath(\
+        return osp.normpath(
             osp.join(self.config.dest, self.relpath, self.dest))
 
     def source_path(self):
-        return osp.normpath(\
+        return osp.normpath(
             osp.join(self.config.source, self.relpath, self.source))
 
     def _makedirs(self):
@@ -103,8 +104,8 @@ class SymlinkAction(Action):
             if not osp.islink(dest):
                 resolve = "diff %s %s\nrm -vi %s" % (osp.abspath(source), osp.abspath(dest), osp.abspath(dest))
                 raise ActionException(self,
-                        "Destination exists and is not a link",
-                        resolve=resolve)
+                                      "Destination exists and is not a link",
+                                      resolve=resolve)
 
     def sync(self):
         source = self.source_path()
@@ -113,8 +114,7 @@ class SymlinkAction(Action):
             # if the link already exists
             if osp.islink(dest):
                 # if the old link is broken or incorrect
-                if not osp.exists(dest) \
-                or not osp.samefile(dest, source):
+                if not osp.exists(dest) or not osp.samefile(dest, source):
                     os.unlink(dest)
                     print "Link target altered"
                 else:
@@ -123,7 +123,7 @@ class SymlinkAction(Action):
             self._makedirs()
 
         relsource = osp.normpath(osp_relpath(source,
-                            osp.join(self.config.dest, self.relpath)))
+                                             osp.join(self.config.dest, self.relpath)))
         os.symlink(relsource, dest)
         print "Created new link: %s => %s" % (dest, source)
 
@@ -228,13 +228,13 @@ class SymlinkForwarder(Forwarder):
 
     def get_proxy(self, parent):
         return SymlinkAction(parent.config, parent.relpath,
-                                self.filename, parent.dest)
+                             self.filename, parent.dest)
 
 
 class EmptyForwarder(Forwarder):
     def get_proxy(self, parent):
         return EmptyAction(parent.config, parent.relpath,
-                            None, parent.dest)
+                           None, parent.dest)
 
 
 class TextForwarder(Forwarder):
@@ -244,7 +244,7 @@ class TextForwarder(Forwarder):
     def get_proxy(self, parent):
         # The text is passed as source
         return TextAction(parent.config, parent.relpath,
-                            self.text, parent.dest)
+                          self.text, parent.dest)
 
 
 class IgnoreForwarder(Forwarder):
@@ -266,7 +266,7 @@ class ProgrammableAction(Action):
         Get limited environment execution.
         This function could be overloaded to add some custom methods.
         """
-        options = self.config.options
+        options = self.config.options  # NOQA
 
         def redirect(filename):
             raise SymlinkForwarder("_%s" % filename)
@@ -316,7 +316,7 @@ class ProgrammableAction(Action):
 
     def __repr__(self):
         return "%s: %s => PROXY %s" % (self.__class__.__name__,
-                                        self.source, repr(self.proxy))
+                                       self.source, repr(self.proxy))
 
 
 class IgnoreAction(Action):
@@ -438,5 +438,5 @@ class ConfigSource(object):
                 yield f
 
     def __repr__(self):
-        return "\n".join(\
+        return "\n".join(
             ("%s: %s" % (action.relpath, repr(action)) for action in self))

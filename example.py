@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 from confman import ConfigSource
 
-options = \
-{
+options = {
     'tags': ['desktop'],
     'hostname': 'test',
 }

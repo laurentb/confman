@@ -13,5 +13,4 @@ c = ConfigSource(samples_path, "/tmp/dotfiles-test", None, options)
 c.sync()
 
 print
-from pprint import pprint
-pprint(c)
+print repr(c)

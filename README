@@ -52,6 +52,11 @@ Special actions
   It will not update the destination file if either file is modified.
 * Files with names ending with ``.p.py`` are programmable actions.
   They contain Python code, and are provided with some special methods.
+* Files with names ending with ``.F`` are normal files.
+  It means ``blah.p.py.F`` will end up as ``blah.p.py``,
+  and ``f.F.F`` as ``f.F``. It is really useful to make a symbolic link of
+  a directory instead of all its children (effectively treating
+  the directory as a file).
 
 All the matching parts of the special actions are removed; ``myfile.empty`` will create
 an empty file named ``myfile``.

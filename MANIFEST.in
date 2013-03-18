@@ -1,3 +1,2 @@
 include README LICENSE
-include example.py
-recursive-include samples *
+recursive-include example *

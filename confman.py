@@ -1,8 +1,8 @@
 from __future__ import with_statement
 
 import os
-import re
 import os.path as osp
+import re
 from string import Template
 
 # Python <2.6 compatibility
@@ -28,9 +28,6 @@ except ImportError:
 
 
 class ConfmanException(Exception):
-    """
-    Should remain empty.
-    """
     pass
 
 

@@ -87,9 +87,18 @@ class Action(object):
 
 
 class SymlinkAction(Action):
+    FORCE_SAME = True
+    "Force replace destination file by symlink if source has same contents"
+
     @classmethod
     def matches(cls, filename):
         return filename
+
+    def same_contents(self):
+        source = self.source_path()
+        dest = self.dest_path()
+        with open(source) as s, open(dest) as d:
+            return s.read() == d.read()
 
     def check(self):
         source = self.source_path()
@@ -98,7 +107,7 @@ class SymlinkAction(Action):
 
         dest = self.dest_path()
         if osp.lexists(dest):
-            if not osp.islink(dest):
+            if not osp.islink(dest) and not (self.FORCE_SAME and self.same_contents()):
                 resolve = "diff %s %s\nrm -vi %s" % (osp.abspath(source), osp.abspath(dest), osp.abspath(dest))
                 raise ActionException(self,
                                       "Destination exists and is not a link",
@@ -116,6 +125,10 @@ class SymlinkAction(Action):
                     print "Link target altered"
                 else:
                     return
+            # if the destination is not a link, but has same contents as source
+            elif self.FORCE_SAME and self.same_contents():
+                os.unlink(dest)
+                print "Link target was a file with same contents"
         else:
             self._makedirs()
 

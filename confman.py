@@ -5,27 +5,6 @@ import os.path as osp
 import re
 from string import Template
 
-# Python <2.6 compatibility
-try:
-    from os.path import relpath as osp_relpath
-except ImportError:
-    def osp_relpath(path, start=osp.curdir):  # NOQA
-        """Return a relative version of a path"""
-
-        if not path:
-            raise ValueError("no path specified")
-
-        start_list = osp.abspath(start).split(osp.sep)
-        path_list = osp.abspath(path).split(osp.sep)
-
-        # Work out how much of the filepath is shared by start and path.
-        i = len(osp.commonprefix([start_list, path_list]))
-
-        rel_list = [osp.pardir] * (len(start_list) - i) + path_list[i:]
-        if not rel_list:
-            return osp.curdir
-        return osp.join(*rel_list)
-
 
 class ConfmanException(Exception):
     pass
@@ -132,7 +111,7 @@ class SymlinkAction(Action):
         else:
             self._makedirs()
 
-        relsource = osp.normpath(osp_relpath(source,
+        relsource = osp.normpath(osp.relpath(source,
                                              osp.join(self.config.dest, self.relpath)))
         os.symlink(relsource, dest)
         print "Created new link: %s => %s" % (dest, source)
@@ -375,7 +354,7 @@ class ConfigSource(object):
         """
         self.tree = {}
         for path, dirs, files in os.walk(self.source, topdown=True):
-            relpath = osp_relpath(path, self.source)
+            relpath = osp.relpath(path, self.source)
 
             to_remove = []
             for filename in dirs:

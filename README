@@ -21,7 +21,7 @@ However, some filenames can indicate special actions instead (see below).
 Requirements
 ------------
 
-Python 2.5 or later.
+Python 2.6 or later (for 2.5, try v0.1).
 No installation needed, though you can install it.
 
 

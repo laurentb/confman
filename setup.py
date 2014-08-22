@@ -5,7 +5,7 @@ from setuptools import setup
 
 setup(
     name='confman',
-    version='0.1',
+    version='0.2.0',
     description='Lazy, rootless, yet powerful config file management mostly using symlinks',
     long_description=open('README').read(),
     author='Laurent Bachelier',

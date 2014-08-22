@@ -296,11 +296,11 @@ class ProgrammableAction(Action):
         else:
             raise ActionException(self, "Unknown result")
 
-        if not self.proxy is None:
+        if self.proxy is not None:
             return self.proxy.check()
 
     def sync(self):
-        if not self.proxy is None:
+        if self.proxy is not None:
             return self.proxy.sync()
 
     def __repr__(self):

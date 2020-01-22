@@ -141,6 +141,7 @@ class TextAction(Action):
         else:
             self._makedirs()
             with open(dest, 'a+') as destfile:
+                destfile.seek(0)
                 if destfile.read() != self.text:
                     if exists and self.ONCE:
                         print("File already exists, not updated: %s" % dest)

@@ -422,8 +422,8 @@ class ConfigSource(object):
         """
         Iterates over all analyzed files.
         """
-        for files in self.tree.itervalues():
-            for f in files.itervalues():
+        for files in self.tree.values():
+            for f in files.values():
                 yield f
 
     def __repr__(self):
